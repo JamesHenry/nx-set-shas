@@ -107,6 +107,10 @@ jobs:
     # E.g. 'ci.yml'. If not provided, current workflow id will be used
     #
     workflow-id: ""
+
+    # Specifies if the NX_BASE SHA should be set to the last [skip-ci] commit that occurred after the original NX_BASE. Includes [ci skip], [no ci], [skip actions], [actions skip]. Useful if your GitHub action commits tags, version numbers, etc to the repository which should not be included
+    # Default: false
+    get-last-skip-ci-commit: false
 ```
 
 <!-- end configuration-options -->
