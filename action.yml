@@ -16,7 +16,7 @@ inputs:
     required: false
     default: ""
   last-successful-event:
-    description: "The type of event to check for the last successful commit corresponding to that workflow-id, e.g. push, pull_request, release etc"
+    description: "The type of event to check for the last successful commit corresponding to that workflow-id, e.g. push or pull_request or release. The property can also contain several types separated by a comma. E.g. schedule,workflow_dispatch."
     default: "push"
   working-directory:
     description: "The directory where your repository is located"

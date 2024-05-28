@@ -99,6 +99,7 @@ jobs:
     last-successful-event: ""
 
     # The path where your repository is. This is only required for cases where the repository code is checked out or moved to a specific path.
+    # The property can also contain several types separated by comma i.e. schedule,workflow_dispatch
     #
     # Default: .
     working-directory: ""

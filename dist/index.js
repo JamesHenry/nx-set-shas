@@ -37914,6 +37914,9 @@ let BASE_SHA;
             else {
                 process.stdout.write("\n");
                 process.stdout.write(`WARNING: Unable to find a successful workflow run on 'origin/${mainBranchName}', or the latest successful workflow was connected to a commit which no longer exists on that branch (e.g. if that branch was rebased)\n`);
+                process.stdout.write(`We are therefore defaulting to use HEAD~1 on 'origin/${mainBranchName}'\n`);
+                process.stdout.write("\n");
+                process.stdout.write(`NOTE: You can instead make this a hard error by setting 'error-on-no-successful-workflow' on the action in your workflow.\n`);
                 if (fallbackSHA) {
                     BASE_SHA = fallbackSHA;
                     process.stdout.write(`Using provided fallback SHA: ${fallbackSHA}\n`);
@@ -37978,21 +37981,49 @@ function findSuccessfulCommit(workflow_id, run_id, owner, repo, branch, lastSucc
             process.stdout.write("\n");
             process.stdout.write(`Workflow Id not provided. Using workflow '${workflow_id}'\n`);
         }
-        // fetch all workflow runs on a given repo/branch/workflow with push and success
-        const shas = yield octokit
-            .request(`GET /repos/${owner}/${repo}/actions/workflows/${workflow_id}/runs`, {
-            owner,
-            repo,
-            // on some workflow runs we do not have branch property
-            branch: lastSuccessfulEvent === "push" ||
-                lastSuccessfulEvent === "workflow_dispatch"
-                ? branch
-                : undefined,
-            workflow_id,
-            event: lastSuccessfulEvent,
-            status: "success",
-        })
-            .then(({ data: { workflow_runs } }) => workflow_runs.map((run) => run.head_sha));
+        let shas = [];
+        // if there are several events separated by comma
+        if (lastSuccessfulEvent.includes(",")) {
+            // find the greatest workflow id among the types and retrieve the sha
+            const events = lastSuccessfulEvent.split(",");
+            const workflowIdMap = new Map();
+            for (const event of events) {
+                const workflowRun = yield octokit
+                    .request(`GET /repos/${owner}/${repo}/actions/workflows/${workflow_id}/runs`, {
+                    owner,
+                    repo,
+                    // on non-push workflow runs we do not have branch property
+                    branch: lastSuccessfulEvent === "push" ||
+                        lastSuccessfulEvent === "workflow_dispatch"
+                        ? branch
+                        : undefined,
+                    event,
+                    workflow_id,
+                })
+                    .then(({ data }) => {
+                    return data.workflow_runs[0];
+                });
+                workflowIdMap.set(workflowRun.id, workflowRun.head_sha);
+            }
+            shas.push(workflowIdMap.get(Math.max(...workflowIdMap.keys())));
+        }
+        else {
+            // fetch all workflow runs on a given repo/branch/workflow with push and success
+            shas = yield octokit
+                .request(`GET /repos/${owner}/${repo}/actions/workflows/${workflow_id}/runs`, {
+                owner,
+                repo,
+                // on non-push workflow runs we do not have branch property
+                branch: lastSuccessfulEvent === "push" ||
+                    lastSuccessfulEvent === "workflow_dispatch"
+                    ? branch
+                    : undefined,
+                workflow_id,
+                event: lastSuccessfulEvent,
+                status: "success",
+            })
+                .then(({ data: { workflow_runs } }) => workflow_runs.map((run) => run.head_sha));
+        }
         return yield findExistingCommit(octokit, branch, shas);
     });
 }
