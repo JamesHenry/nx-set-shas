@@ -37861,7 +37861,6 @@ const fs_1 = __nccwpck_require__(7147);
 const https_proxy_agent_1 = __nccwpck_require__(7219);
 const proxy_from_env_1 = __nccwpck_require__(3329);
 const { runId, repo: { repo, owner }, eventName, } = github.context;
-process.env.GITHUB_TOKEN = core.getInput('token', { required: true });
 const mainBranchName = core.getInput('main-branch-name');
 const errorOnNoSuccessfulWorkflow = core.getBooleanInput('error-on-no-successful-workflow');
 const lastSuccessfulEvent = core.getInput('last-successful-event');
