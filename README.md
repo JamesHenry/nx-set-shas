@@ -1,9 +1,9 @@
 <p style="text-align: center;"><img src=".github/assets/nx.png" 
 width="100%" alt="Nx - Smart, Extensible Build Framework"></p>
 
-<h1 align="center">Set SHAs Action</h2>
+<h1 align="center">Set SHAs Action</h1>
 
-✨ A Github Action which sets the base and head SHAs required for the `nx affected` commands in CI
+✨ A GitHub Action which sets the base and head SHAs required for the `nx affected` commands in CI
 
 - [Example Usage](#example-usage)
 - [Configuration Options](#configuration-options)
@@ -141,7 +141,7 @@ This Action supports usage of your own self-hosted runners, but since it uses Gi
 jobs:
   myjob:
     runs-on: self-hosted
-      container: my-org/my-amazing-image:v1.2.3-fresh
+    container: my-org/my-amazing-image:v1.2.3-fresh
     name: My Job
     steps:
       - uses: actions/checkout@v4
