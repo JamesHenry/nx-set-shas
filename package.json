@@ -4,7 +4,7 @@
   "license": "MIT",
   "description": "This package.json is here purely to control the version of the Action, in combination with https://github.com/JamesHenry/publish-shell-action",
   "scripts": {
-    "build": "ncc build find-successful-workflow.ts --license licenses.txt",
+    "build": "ncc build src/main.ts -o dist --license licenses.txt",
     "prepare": "is-ci || husky install",
     "format:check": "prettier --check .",
     "format": "prettier --write ."
