@@ -30,13 +30,10 @@ inputs:
 outputs:
   base:
     description: The value intended for use with --base or NX_BASE in all subsequent `nx affected` commands within the current workflow
-    value: ${{ steps.setSHAs.outputs.base }}
   head:
     description: The value intended for use with --head or NX_HEAD in all subsequent `nx affected` commands within the current workflow
-    value: ${{ steps.setSHAs.outputs.head }}
   noPreviousBuild:
     description: "Used to check if a previous run was found in order to perform additional logic later on in your workflow, the only possible values is the string 'true', otherwise it won't be set"
-    value: ${{ steps.setSHAs.outputs.noPreviousBuild }}
 
 runs:
   using: 'node20'
