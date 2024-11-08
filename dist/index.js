@@ -64877,8 +64877,16 @@ const lastSuccessfulEvent = process.argv[5];
 const workingDirectory = process.argv[6];
 const workflowId = process.argv[7];
 const fallbackSHA = process.argv[8];
+const getLastSkippedCommitAfterBase = process.argv[9] === 'true';
 const defaultWorkingDirectory = '.';
 const ProxifiedClient = action_1.Octokit.plugin(proxyPlugin);
+const messagesToSkip = [
+    '[skip ci]',
+    '[ci skip]',
+    '[no ci]',
+    '[skip actions]',
+    '[actions skip]',
+];
 let BASE_SHA;
 (() => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -64916,6 +64924,15 @@ let BASE_SHA;
             core.setFailed(e.message);
             return;
         }
+        if (getLastSkippedCommitAfterBase && BASE_SHA) {
+            try {
+                BASE_SHA = yield findLastSkippedCommitAfterSha(stripNewLineEndings(BASE_SHA), stripNewLineEndings(HEAD_SHA), messagesToSkip, mainBranchName);
+            }
+            catch (e) {
+                core.setFailed(e.message);
+                return;
+            }
+        }
         if (!BASE_SHA) {
             if (errorOnNoSuccessfulWorkflow === 'true') {
                 reportFailure(mainBranchName);
@@ -64924,6 +64941,9 @@ let BASE_SHA;
             else {
                 process.stdout.write('\n');
                 process.stdout.write(`WARNING: Unable to find a successful workflow run on 'origin/${mainBranchName}', or the latest successful workflow was connected to a commit which no longer exists on that branch (e.g. if that branch was rebased)\n`);
+                process.stdout.write(`We are therefore defaulting to use HEAD~1 on 'origin/${mainBranchName}'\n`);
+                process.stdout.write('\n');
+                process.stdout.write(`NOTE: You can instead make this a hard error by setting 'error-on-no-successful-workflow' on the action in your workflow.\n`);
                 if (fallbackSHA) {
                     BASE_SHA = fallbackSHA;
                     process.stdout.write(`Using provided fallback SHA: ${fallbackSHA}\n`);
@@ -65092,6 +65112,78 @@ function commitExists(octokit, branchName, commitSha) {
  */
 function stripNewLineEndings(string) {
     return string.replace('\n', '');
+}
+/**
+ * Takes in an sha and then will walk forward in time finding the last commit that was a skip-ci type to use that as the new base
+ */
+function findLastSkippedCommitAfterSha(baseSha, headSha, messagesToSkip = [], branchName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        process.stdout.write(`Checking commits from "${baseSha}" onwards for skip ci messages\n`);
+        if (!messagesToSkip.length) {
+            process.stdout.write(`messagesToSkip was empty, returning\n`);
+            return;
+        }
+        const octokit = new ProxifiedClient();
+        const baseCommit = yield getCommit(octokit, baseSha);
+        const headCommit = yield getCommit(octokit, headSha);
+        const commits = (yield findAllCommitsBetweenShas(octokit, branchName, baseCommit, headCommit)).filter((c) => c.sha !== baseSha);
+        const sortedCommits = commits.sort((a, b) => a.date.localeCompare(b.date));
+        let newBaseSha = baseSha;
+        for (const commit of sortedCommits) {
+            const containsAnySkipMessages = messagesToSkip.some((m) => commit.message.indexOf(m) >= 0);
+            if (containsAnySkipMessages) {
+                newBaseSha = commit.sha;
+                continue;
+            }
+            return commit.sha === headSha ? newBaseSha : commit.sha;
+        }
+        return newBaseSha === headSha ? baseSha : newBaseSha;
+    });
+}
+/**
+ * Finds all commits between two provided commits
+ */
+function findAllCommitsBetweenShas(octokit, branchName, baseCommit, headCommit, page = 1) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let commits = (yield octokit.request('GET /repos/{owner}/{repo}/commits', {
+            owner,
+            repo,
+            sha: branchName,
+            since: baseCommit.date,
+            until: headCommit.date,
+            page,
+            per_page: 100,
+        })).data.map(getSimplifiedCommit);
+        const resultsContainsHead = commits.some((c) => c.sha === headCommit.sha);
+        if (!resultsContainsHead) {
+            //need to get the next page as we haven't reached the head yet.
+            commits = commits.concat(yield findAllCommitsBetweenShas(octokit, branchName, baseCommit, headCommit, page + 1));
+        }
+        return commits;
+    });
+}
+/**
+ * Gets the specified commit by its SHA
+ */
+function getCommit(octokit, commitSha) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const fullCommit = (yield octokit.request('GET /repos/{owner}/{repo}/commits/{commit_sha}', {
+            owner,
+            repo,
+            commit_sha: commitSha,
+        })).data;
+        return getSimplifiedCommit(fullCommit);
+    });
+}
+/**
+ * strips out properties from the GitHub commit object to a simplified version for working with
+ */
+function getSimplifiedCommit(commit) {
+    return {
+        sha: commit.sha,
+        message: commit.commit.message,
+        date: commit.commit.committer.date,
+    };
 }
 
 

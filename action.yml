@@ -23,6 +23,9 @@ inputs:
     default: '.'
   workflow-id:
     description: 'The ID of the workflow to track or name of the file name. E.g. ci.yml. Defaults to current workflow'
+  get-last-skip-ci-commit:
+    default: false
+    description: Specifies if the NX_BASE SHA should be set to the last [skip-ci] commit that occurred after the original NX_BASE. Useful if your GitHub action commits tags, version numbers, etc to the repository which should not be included'
 
 outputs:
   base:
@@ -49,7 +52,8 @@ runs:
         working_directory: ${{ inputs.working-directory }}
         working_id: ${{ inputs.workflow-id }}
         fallback_sha: ${{ inputs.fallback-sha }}
-      run: node "$GITHUB_ACTION_PATH/dist/index.js" "$gh_token" "$main_branch_name" "$error_on_no_successful_workflow" "$last_successful_event" "$working_directory" "$working_id" "$fallback_sha"
+        get_last_skip_ci_commit: ${{inputs.get-last-skip-ci-commit}}
+      run: node "$GITHUB_ACTION_PATH/dist/index.js" "$gh_token" "$main_branch_name" "$error_on_no_successful_workflow" "$last_successful_event" "$working_directory" "$working_id" "$fallback_sha" "$get_last_skip_ci_commit"
 
     - name: Log base and head SHAs used for nx affected
       shell: bash
